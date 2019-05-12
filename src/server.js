@@ -3,7 +3,6 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import path from 'path';
 import morgan from 'morgan';
-// import * as Polls from './controllers/poll_controller';
 import models, { sequelize } from './models';
 
 // /////////// WORKSHOP //////////////
