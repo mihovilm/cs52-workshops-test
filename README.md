@@ -14,6 +14,7 @@ We need  PG
 
 ### Open Terminal
 `brew install postgresql`
+
 `brew services start postgresql`
 
 psql is the PostgreSQL interactive terminal. Running `psql` will connect you to a PostgreSQL host. Running `psql --help` will give you more information about the available options for connecting with psql.
@@ -79,7 +80,7 @@ Instead of postgres=#, our prompt shows postgres=> now, meaning we're no longer 
 Cd to the workshop directory.
 
 `brew upgrade node`
-`yarn`
+`yarn install`
 `yarn add sequelize pg pg-hstore`
 
 #### Part 1
