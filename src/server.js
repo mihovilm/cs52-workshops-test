@@ -4,55 +4,15 @@ import cors from 'cors';
 import path from 'path';
 import morgan from 'morgan';
 import models, { sequelize } from './models';
+import createAuthorsWithPolls from './polls';
 
-// /////////// WORKSHOP //////////////
-// Part 5
+// sync Sequelize
 const eraseDatabaseOnSync = true;
-
-const createAuthorsWithPolls = async () => {
-  await models.Author.create(
-    {
-      name: 'tim',
-      // notice how polls was not a field in the model..but now it became one after the 'associate' part
-      // sequelize also pluralized it from poll to polls by itself!
-      polls: [
-        {
-          text: 'Pangolins are cute',
-          imageURL: 'https://media.giphy.com/media/uscuTAPrWqmqI/giphy.gif',
-          upvotes: 69,
-          downvotes: 69,
-        },
-      ],
-    },
-    {
-      include: [models.Poll],
-    },
-  );
-
-  await models.Author.create(
-    {
-      name: 'cool tim',
-      polls: [
-        {
-          text: 'Pangolins are FREAKING AMAZING',
-          imageURL: 'https://media.giphy.com/media/uscuTAPrWqmqI/giphy.gif',
-          upvotes: 3000,
-          downvotes: 0,
-        },
-      ],
-    },
-    {
-      include: [models.Poll],
-    },
-  );
-};
-
 sequelize.sync({ force: eraseDatabaseOnSync }).then(async () => {
   if (eraseDatabaseOnSync) {
     createAuthorsWithPolls();
   }
 });
-
 
 // initialize
 const app = express();
@@ -76,12 +36,22 @@ app.set('views', path.join(__dirname, '../src/views'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// additional init stuff should go before hitting the routing
 
-// default index route
+// GET new
+app.get('/new', (req, res) => {
+  res.render('new');
+});
+
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+// ░░█▀█▐▀█░▐▀▀▌░▀█▀░░▀▀▀▌░░░▌░░
+// ░░█▄█▐▄█░▐▄▄▌░░▌░░░▄▄▄▌░░░▌░░
+// ░░▌░░▐░▐░▐░█░░░▌░░░░░░▌░░░▌░░
+// ░░▌░░▐░▐░▐░░▌░░▌░░░▄▄▄▌█░░▌░░
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+// DEFAULT INDEX ROUTE
 app.get('/', (req, res) => {
   models.Poll.findAll({
-    include: [{ model: models.Author }],
+    include: [{ model: models.Author }], // something like populate in mongoose
   })
     .then((polls) => {
       res.render('index', { polls });
@@ -90,13 +60,13 @@ app.get('/', (req, res) => {
     });
 });
 
-// GET new
-app.get('/new', (req, res) => {
-  res.render('new');
-});
-
-
-// POST new
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+// ░░█▀█▐▀█░▐▀▀▌░▀█▀░░▀▀▀▌░░░▀▀▌░░
+// ░░█▄█▐▄█░▐▄▄▌░░▌░░░▄▄▄▌░░░▄▄▌░░
+// ░░▌░░▐░▐░▐░█░░░▌░░░░░░▌░░░▌░░░░
+// ░░▌░░▐░▐░▐░░▌░░▌░░░▄▄▄▌█░░█▄▄░░
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+// POST /new
 app.post('/new', (req, res) => {
   const newpoll = {
     text: req.body.text,
@@ -109,10 +79,13 @@ app.post('/new', (req, res) => {
     },
   )
     .then((poll) => {
-      models.Author.findOrCreate({ where: { name: req.body.author } })
+      // if there is no author with that name already, create one
+      models.Author.findOrCreate({
+        where: { name: req.body.author },
+      })
         .then((author) => {
-          poll.setAuthor(author[0]);
-          poll.save();
+          poll.setAuthor(author[0]); // findOrCreate returns an array, so we just need the first one
+          poll.save(); // finally update the object with the new association
         })
         .then(() => {
           res.redirect('/');
@@ -120,13 +93,17 @@ app.post('/new', (req, res) => {
     });
 });
 
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+// ░░█▀█▐▀█░▐▀▀▌░▀█▀░░▀▀▀▌░░▀▀▌░░
+// ░░█▄█▐▄█░▐▄▄▌░░▌░░░▄▄▄▌░░▄▄▌░░
+// ░░▌░░▐░▐░▐░█░░░▌░░░░░░▌░░░░▌░░
+// ░░▌░░▐░▐░▐░░▌░░▌░░░▄▄▄▌█░▄▄▌░░
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 // POST vote/:id
 app.post('/vote/:id', (req, res) => {
-  const vote = (req.body.vote === 'up');// convert to bool
-  // models.Poll.vote(req.params.id, vote).then((result) => {
-  //   res.send(result);
-  // });
+  const vote = (req.body.vote === 'up');
 
+  // find by primary key - ID, returns poll as an object
   models.Poll.findByPk(req.params.id).then((poll) => {
     console.log(`updating vote: ${poll} ${vote}`);
     if (vote) {
@@ -138,6 +115,13 @@ app.post('/vote/:id', (req, res) => {
   });
 });
 
+
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+// ░░█▀█▐▀█░▐▀▀▌░▀█▀░░▀▀▀▌░░▌░▌░░░
+// ░░█▄█▐▄█░▐▄▄▌░░▌░░░▄▄▄▌░░▌░▌░░░
+// ░░▌░░▐░▐░▐░█░░░▌░░░░░░▌░░▀▀▌░░░
+// ░░▌░░▐░▐░▐░░▌░░▌░░░▄▄▄▌█░░░▌░░░
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 // GET author's posts
 app.get('/author/:id', (req, res) => {
   models.Poll.findAll({
@@ -145,7 +129,7 @@ app.get('/author/:id', (req, res) => {
     include: [{ model: models.Author }],
   })
     .then((polls) => {
-      res.render('index', { polls });
+      res.render('author', { polls });
     }).catch((error) => {
       res.send(`error: ${error}`);
     });
